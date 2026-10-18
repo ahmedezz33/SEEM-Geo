@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+
+      - name: Verify imports
+        run: |
+          python -c "import seem_geo; print(f'OK v{seem_geo.__version__}')"
+          python -c "from seem_geo.core.project import SeemProject; print('OK project')"
+          python -c "from seem_geo.core.ert import process_ert_station; print('OK ert')"
+          python -c "from seem_geo.core.masw import process_masw_station; print('OK masw')"
+          python -c "from seem_geo.core.correlations import build_correlations; print('OK corr')"
+          python -c "from seem_geo.reports.pdf_report import build_pdf_report; print('OK pdf')"
+          python -c "from seem_geo.io.importers import detect_and_read_ert; print('OK import')"
+          python -c "from seem_geo.io.kmz_exporter import export_results_kmz; print('OK kmz')"
+
+      - name: Smoke test — full pipeline
+        shell: bash
+        run: |
+          # Generate test data
+          python -m seem_geo gen-data --out /tmp/field_test || python -m seem_geo gen-data --out field_test
+
+          # Build project
+          python -m seem_geo init --output /tmp/test.seemproj || python -m seem_geo init --output test.seemproj
+
+      - name: Check CLI help
+        run: |
+          seem-geo --help
+
+  build-exe:
+    name: Build Windows .exe
+    runs-on: windows-latest
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          pip install -e .
+          pip install pyinstaller
+      - name: Build .exe
+        run: python build_windows.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SEEM_Geo-Windows-${{ github.ref_name }}
+          path: dist/SEEM_Geo.exe
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [test, build-exe]
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: SEEM_Geo-Windows-${{ github.ref_name }}
+          path: dist/
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/SEEM_Geo.exe
+          generate_release_notes: true
+          body_path: CHANGELOG.md

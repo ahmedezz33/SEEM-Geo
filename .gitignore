@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+*.whl
+
+# Virtual environments
+venv/
+env/
+.venv/
+seemgeo_env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# SEEM output folders (user-generated)
+output/
+*_output/
+seem_test_output/
+
+# User project files (don't commit personal projects)
+*.seemproj
+!examples/example_project.seemproj
+
+# User field data
+data/ERT/
+data/MASW/
+field_data/
+raw_data/
+
+# Build artifacts
+*.spec
+*.exe
+*.app
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db
+.DS_Store

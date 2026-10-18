@@ -1,0 +1,25 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include CODE_OF_CONDUCT.md
+include SECURITY.md
+include CITATION.cff
+include requirements.txt
+include .zenodo.json
+include pyproject.toml
+
+recursive-include docs *.md *.png
+recursive-include examples *.seemproj *.csv *.pdf
+recursive-include seem_geo *.py *.json
+
+prune __pycache__
+prune .github
+prune build
+prune dist
+prune *.egg-info
+
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude .DS_Store

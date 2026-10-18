@@ -1,0 +1,44 @@
+{
+  "title": "SEEM Geo — Professional ERT & MASW Processing Suite",
+  "description": "A Python package for processing field-acquired Electrical Resistivity Tomography (Wenner-alpha) and Multichannel Analysis of Surface Waves data. Features: Occam 2D inversion, Vs30 computation, site classification, 8-correlation framework with full statistical qualifications, fence diagrams, Google Earth KMZ export, interactive dispersion picker, and ready-to-publish 58-page PDF reports.",
+  "upload_type": "software",
+  "creators": [
+  {
+  "name": "Project author",
+  "affiliation": "Your institution"
+  }
+  ],
+  "access_right": "open",
+  "license": "MIT",
+  "keywords": [
+  "geophysics",
+  "electrical resistivity tomography",
+  "ERT",
+  "MASW",
+  "multichannel analysis of surface waves",
+  "Wenner array",
+  "Vs30",
+  "shear-wave velocity",
+  "site classification",
+  "engineering geology",
+  "foundation design",
+  "Python",
+  "scientific software"
+  ],
+  "communities": [
+  {"identifier": "earth-sciences"},
+  {"identifier": "open-source"}
+  ],
+  "related_identifiers": [
+  {
+  "scheme": "url",
+  "identifier": "https://github.com/ahmedezz33/seem-geo",
+  "relation": "isSupplementTo"
+  }
+  ],
+  "notes": "Open-source geophysical processing suite for linear-infrastructure site investigations.",
+  "subjects": [
+  {"term": "Geophysics", "identifier": "http://id.loc.gov/authorities/subjects/sh85054440"},
+  {"term": "Engineering geology", "identifier": "http://id.loc.gov/authorities/subjects/sh85042989"}
+  ]
+}

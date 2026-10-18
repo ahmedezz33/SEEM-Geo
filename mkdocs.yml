@@ -1,0 +1,86 @@
+site_name: SEEM Geo Documentation
+site_description: Professional ERT & MASW Processing Suite for Engineering-Geology Site Investigations
+site_author: SEEM Geo contributors
+site_url: https://ahmedezz33.github.io/seem-geo/
+
+repo_name: ahmedezz33/seem-geo
+repo_url: https://github.com/ahmedezz33/seem-geo
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: en
+  logo: assets/logo.png
+  favicon: assets/favicon.png
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.integrate
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+nav:
+  - Home: index.md
+  - User Guide (Arabic): USER_GUIDE_AR.md
+  - Publishing to GitHub: PUBLISH_TO_GITHUB.md
+  - Changelog: CHANGELOG.md
+  - Contributing: CONTRIBUTING.md
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ahmedezz33/seem-geo
+  version:
+    provider: mike
+
+copyright: Copyright &copy; 2026 SEEM Geo contributors

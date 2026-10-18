@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "project": {
+  "name": "linear-infrastructure Investigation",
+  "author": "Project author",
+  "institution": "Your institution",
+  "created": "2026-01-01T00:00:00",
+  "last_modified": "2026-01-01T00:00:00"
+  },
+  "corridor": {
+  "start_name": "West end",
+  "end_name": "East end",
+  "crs": "WGS 84 UTM (specify Zone in your project)",
+  "azimuth_deg": 90.0,
+  "length_km": 15.0
+  },
+  "acquisition": {
+  "ert": {
+  "array": "Wenner-alpha",
+  "n_electrodes": 48,
+  "spacing_m": 2.0,
+  "spread_length_m": 100.0,
+  "orientation_deg": 90.0
+  },
+  "masw": {
+  "n_geophones": 24,
+  "spacing_m": 2.0,
+  "spread_length_m": 46.0,
+  "geophone_freq_hz": 4.5,
+  "source_type": "10 kg sledgehammer on steel plate",
+  "source_offsets_m": [1, 5, 10, 15],
+  "sampling_rate_hz": 2000
+  }
+  },
+  "processing": {
+  "ert_inversion": {
+  "method": "Occam (smoothness-constrained LS)",
+  "nx_cells": 24,
+  "nz_cells": 12,
+  "max_depth_m": 30,
+  "lambda_damping": 10.0,
+  "n_iterations": 5
+  },
+  "masw_inversion": {
+  "v_min_ms": 100,
+  "v_max_ms": 800,
+  "f_min_hz": 4,
+  "f_max_hz": 50,
+  "n_layers": 10,
+  "max_depth_m": 30,
+  "depth_rule": "lambda/3"
+  },
+  "correlations": {
+  "target_depth_m": 5.0,
+  "extraction_radius_m": 5.0
+  }
+  },
+  "paths": {
+  "ert_input": "data/ERT/",
+  "masw_input": "data/MASW/",
+  "bh_coordinates": "data/example_stations.csv",
+  "output_root": "output/"
+  },
+  "sites": [
+  {"bh": "BH1",  "group": "G3", "ert_id": "ERT-01", "masw_id": "MW-01",
+  "rqd_mean": 30, "ucs_mpa": 6.0, "n60": 25, "w_grade": "V"},
+  {"bh": "BH2",  "group": "G3", "ert_id": "ERT-02", "masw_id": "MW-02",
+  "rqd_mean": 30, "ucs_mpa": 7.0, "n60": 30, "w_grade": "IV"},
+  {"bh": "BH3",  "group": "G5", "ert_id": "ERT-03", "masw_id": "MW-03",
+  "rqd_mean": null, "ucs_mpa": null, "n60": 22, "w_grade": "VI"},
+  {"bh": "BH4",  "group": "G5", "ert_id": "ERT-04", "masw_id": "MW-04",
+  "rqd_mean": null, "ucs_mpa": null, "n60": 28, "w_grade": "VI"},
+  {"bh": "BH5",  "group": "G3", "ert_id": "ERT-05", "masw_id": "MW-05",
+  "rqd_mean": 30, "ucs_mpa": 6.5, "n60": 28, "w_grade": "IV"},
+  {"bh": "BH6",  "group": "G1", "ert_id": "ERT-06", "masw_id": "MW-06",
+  "rqd_mean": 40, "ucs_mpa": 30.0, "n60": 60, "w_grade": "III"},
+  {"bh": "BH7",  "group": "G1", "ert_id": "ERT-07", "masw_id": "MW-07",
+  "rqd_mean": 25, "ucs_mpa": 25.0, "n60": 60, "w_grade": "IV"},
+  {"bh": "BH8",  "group": "G1", "ert_id": "ERT-08", "masw_id": "MW-08",
+  "rqd_mean": 45, "ucs_mpa": 35.0, "n60": 60, "w_grade": "II"},
+  {"bh": "BH9",  "group": "G2", "ert_id": "ERT-09", "masw_id": "MW-09",
+  "rqd_mean": 65, "ucs_mpa": 75.0, "n60": 60, "w_grade": "II"},
+  {"bh": "BH10", "group": "G2", "ert_id": "ERT-10", "masw_id": "MW-10",
+  "rqd_mean": 60, "ucs_mpa": 60.0, "n60": 60, "w_grade": "III"},
+  {"bh": "BH11", "group": "G5", "ert_id": "ERT-11", "masw_id": "MW-11",
+  "rqd_mean": null, "ucs_mpa": null, "n60": 30, "w_grade": "VI"},
+  {"bh": "BH12", "group": "G1", "ert_id": "ERT-12", "masw_id": "MW-12",
+  "rqd_mean": 50, "ucs_mpa": 50.0, "n60": 60, "w_grade": "II"}
+  ]
+}

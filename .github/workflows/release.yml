@@ -1,0 +1,128 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-exe-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          pip install -e .
+          pip install pyinstaller
+      - name: Build .exe
+        run: python build_windows.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SEEM_Geo-Windows-${{ github.ref_name }}
+          path: dist/SEEM_Geo.exe
+
+  build-app-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          pip install -e .
+          pip install pyinstaller
+      - name: Build .app
+        run: python build_windows.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SEEM_Geo-macOS-${{ github.ref_name }}
+          path: dist/SEEM_Geo
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y python3-tk
+      - name: Install
+        run: |
+          pip install -e .
+          pip install pyinstaller
+      - name: Build Linux binary
+        run: python build_windows.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SEEM_Geo-Linux-${{ github.ref_name }}
+          path: dist/SEEM_Geo
+
+  publish-to-pypi:
+    runs-on: ubuntu-latest
+    needs: [build-exe-windows]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install build tools
+        run: pip install build twine
+      - name: Build sdist + wheel
+        run: python -m build
+      - name: Publish to PyPI
+        env:
+          TWINE_ahmedezz33: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          twine upload --skip-existing dist/*
+        continue-on-error: true
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-exe-windows, build-app-macos, build-linux]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/SEEM_Geo-Windows-*/SEEM_Geo.exe
+            artifacts/SEEM_Geo-macOS-*/**
+            artifacts/SEEM_Geo-Linux-*/**
+          body: |
+            ## 🎉 SEEM Geo ${{ github.ref_name }}
+
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for the full list of changes.
+
+            ### 📥 Downloads
+            - **Windows:** `SEEM_Geo.exe` (standalone, ~150 MB — no Python needed)
+            - **macOS:** `SEEM_Geo` (standalone)
+            - **Linux:** `SEEM_Geo` (standalone)
+            - **Source:** download from the Source tab, or `pip install seem-geo==${{ github.ref_name }}`
+
+            ### 🚀 Quick start
+            ```bash
+            # From PyPI
+            pip install seem-geo
+            seem-geo gui
+
+            # From source
+            git clone https://github.com/${{ github.repository }}.git
+            cd seem-geo
+            pip install -e .
+            ```
+          draft: false
+          prerelease: false
+          generate_release_notes: true

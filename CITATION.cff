@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use SEEM Geo in your research, please cite it as below."
+title: "SEEM Geo: Professional ERT & MASW Processing Suite for Linear-Infrastructure Site Investigations"
+abstract: >-
+  A Python package for processing field-acquired Electrical Resistivity Tomography
+  (Wenner-alpha) and Multichannel Analysis of Surface Waves data. Produces inverted
+  resistivity sections, Vs(z) profiles, Vs30 and local site classification,
+  an 8-correlation geotechnical-geophysical framework with full statistical
+  qualifications, fence diagrams, Google Earth KMZ exports, and thesis-ready
+  58-page PDF reports.
+type: software
+version: "1.1.0"
+date-released: "2026-10-17"
+license: MIT
+repository-code: "https://github.com/ahmedezz33/seem-geo"
+url: "https://github.com/ahmedezz33/seem-geo"
+authors:
+  - given-names: Ahmed
+  affiliation: "the author's institution; Open-source project"
+  email: your-email@example.com
+keywords:
+  - geophysics
+  - electrical-resistivity-tomography
+  - MASW
+  - Vs30
+  - local-code
+  - engineering-geology
+  - HVDC
+
+preferred-citation:
+  type: software
+  title: "SEEM Geo: Professional ERT & MASW Processing Suite"
+  authors:
+  - given-names: Ahmed
+  affiliation: "the author's institution"
+  year: 2026
+  version: "1.1.0"
+  url: "https://github.com/ahmedezz33/seem-geo"
+  doi: "10.5281/zenodo.XXXXXXX"
