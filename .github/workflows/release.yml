@@ -23,7 +23,7 @@ jobs:
           pip install pyinstaller
       - name: Build .exe
         run: python build_windows.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: SEEM_Geo-Windows-${{ github.ref_name }}
           path: dist/SEEM_Geo.exe
@@ -41,7 +41,7 @@ jobs:
           pip install pyinstaller
       - name: Build .app
         run: python build_windows.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: SEEM_Geo-macOS-${{ github.ref_name }}
           path: dist/SEEM_Geo
@@ -61,7 +61,7 @@ jobs:
           pip install pyinstaller
       - name: Build Linux binary
         run: python build_windows.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: SEEM_Geo-Linux-${{ github.ref_name }}
           path: dist/SEEM_Geo
