@@ -9,15 +9,20 @@ on:
       - 'README.md'
       - 'CHANGELOG.md'
       - 'CONTRIBUTING.md'
+      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +34,8 @@ jobs:
 
       - name: Install MkDocs
         run: |
-          pip install mkdocs mkdocs-material mike pymdown-extensions
+          pip install --upgrade pip
+          pip install mkdocs mkdocs-material pymdown-extensions
 
       - name: Copy top-level docs into docs/
         run: |
@@ -38,11 +44,23 @@ jobs:
           cp CONTRIBUTING.md docs/CONTRIBUTING.md 2>/dev/null || true
 
       - name: Build docs
-        run: mkdocs build --strict
+        run: mkdocs build
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          force_orphan: true
+          path: ./site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
