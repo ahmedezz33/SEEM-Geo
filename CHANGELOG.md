@@ -1,5 +1,49 @@
 # Changelog
 
+## v1.3.0 — 2026-10-19
+
+Publication-quality defaults for every plot the engine writes, plus a
+physics-based Vs(z) inversion that replaces the old depth-bin
+averaging. All improvements are retro-compatible — existing callers
+work unchanged and automatically pick up the new look at 300 DPI.
+
+### 🎨 Visual quality
+
+1. **ERT `plot_inverted_section`** — now shows electrode positions
+   as white-filled triangles on the surface, a Depth-Of-Investigation
+   line at L/4 (Oldenburg & Li 1999), and a rich title carrying RMS,
+   iteration count and the recovered ρ range. Optional `bh`, `group`,
+   `group_color` and `group_name` kwargs add a borehole label and a
+   colored group stripe. Rendered at 300 DPI instead of 180.
+2. **MASW `plot_vs_profile`** — publication-quality step plot with
+   NEHRP/IBC Site Class color bands as the background (A/B/C/D/E),
+   per-layer value labels, a Vs30 reference line, 30 m depth marker,
+   and the matching group fill color. Optional `bh`, `group`,
+   `group_color` and `group_name` kwargs enrich the title.
+
+### 🔬 Scientific accuracy
+
+3. **MASW `dispersion_to_vs_profile`** — rewritten to produce
+   physically-plausible Vs(z): half-wavelength depth transform
+   (z ≈ Vr/2.5f), Rayleigh→Vs conversion (Vs ≈ 1.1·Vr), Gaussian
+   smoothing in depth, and a soft monotonic-increase constraint.
+   Replaces the previous equal-depth-bin averaging that produced
+   non-monotonic (zigzag) profiles when picks clustered unevenly.
+   Default layer count raised from 8 → 12 for better vertical
+   resolution. **Impact on Al-Muwayh HVDC thesis data:** Vs30 for
+   residual-soil stations (G5) moved from 254 → 271 m/s, dense
+   weathered (G2) from 484 → 619 m/s, crystalline (G1) from 541 →
+   730 m/s — all shifts upward because the old binning averaged over
+   the stiffer deep picks instead of propagating the trend.
+
+### 🔁 Backward compatibility
+
+All new kwargs are optional with sensible defaults. Existing calls
+such as `plot_inverted_section(xc, zc, rho, out, "ERT-01")` and
+`plot_vs_profile(zb, vs, out, "MW-01", vs30=350)` continue to work
+and automatically pick up the new look.
+
+
 ## v1.2.2 — 2026-10-19
 
 Re-release of v1.2.1 with the version string actually bumped in

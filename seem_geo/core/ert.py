@@ -173,24 +173,74 @@ def invert_resistivity_2d(df, nx=24, nz=12, max_depth=30, lam=10.0, n_iter=5, ve
     return xc, zc, rho_model, rms_history
 
 
-def plot_inverted_section(xc, zc, rho_model, out_png, station_id="ERT-??"):
-    fig, ax = plt.subplots(figsize=(13, 5.5))
-    vmin = max(rho_model.min(), 1)
-    vmax = rho_model.max()
+def plot_inverted_section(xc, zc, rho_model, out_png, station_id="ERT-??",
+                           rms=None, n_iter=None, bh=None, group=None,
+                           group_color=None, group_name=None,
+                           electrode_spacing=None):
+    """Publication-quality inverted resistivity section.
+
+    Shows electrode positions on the surface, DOI (depth of investigation = L/4),
+    and reports RMS, number of iterations and the recovered resistivity range in
+    the title. All annotation parameters are optional for backward compatibility.
+    """
+    fig, ax = plt.subplots(figsize=(14, 6), facecolor='white')
+    vmin, vmax = np.percentile(rho_model.ravel(), [5, 95])
+    vmin = max(vmin, 1)
     Xc, Zc = np.meshgrid(xc, zc)
     im = ax.pcolormesh(Xc, Zc, rho_model, cmap='turbo',
                        norm=LogNorm(vmin=vmin, vmax=vmax), shading='auto')
-    cs = ax.contour(Xc, Zc, rho_model, levels=[100, 500, 1000],
-                    colors='white', linewidths=0.8, alpha=0.7)
-    ax.clabel(cs, inline=True, fontsize=8, fmt='%g')
+
+    # Electrode positions on the surface
+    if electrode_spacing is None:
+        electrode_spacing = (xc.max() - xc.min()) / max(len(xc) - 1, 1) * 0.75
+    try:
+        n_elec = int((xc.max() - xc.min()) / max(electrode_spacing, 1)) + 1
+        elec_x = np.linspace(xc.min(), xc.max(), min(max(n_elec, 2), 48))
+        ax.plot(elec_x, np.zeros_like(elec_x) + 0.3, 'v',
+                color='black', markersize=5, markerfacecolor='white',
+                markeredgecolor='black', clip_on=False, zorder=5)
+    except Exception:
+        pass
+
+    # DOI = L/4 (Oldenburg & Li 1999 convention)
+    doi = (xc.max() - xc.min()) / 4
+    ax.axhline(doi, color='white', linestyle='--', linewidth=1.5,
+                alpha=0.85, zorder=4)
+    ax.text(xc.max(), doi, f'  DOI ≈ {doi:.1f} m',
+             color='white', fontsize=9, va='center',
+             bbox=dict(boxstyle='round,pad=0.3', facecolor='black', alpha=0.6))
+
+    # Group color stripe on the right edge, when known
+    if group_color is not None:
+        from matplotlib.patches import Rectangle
+        stripe = Rectangle((xc.max() - 1, zc.min()), 0.8, zc.max() - zc.min(),
+                            facecolor=group_color, edgecolor='black',
+                            linewidth=0.5, zorder=3)
+        ax.add_patch(stripe)
+
     ax.invert_yaxis()
-    ax.set_xlabel('Distance along spread (m)', fontsize=11)
-    ax.set_ylabel('Depth (m)', fontsize=11)
-    ax.set_title(f'{station_id} - Inverted True-Resistivity Section',
-                 fontsize=13, fontweight='bold')
-    plt.colorbar(im, ax=ax, label='rho (Ohm.m)', pad=0.02)
+    ax.set_xlabel('Distance along spread (m)', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Depth (m)', fontsize=12, fontweight='bold')
+
+    # Rich title with run metadata
+    title_parts = [station_id]
+    if bh:         title_parts.append(bh)
+    if group_name: title_parts.append(group_name)
+    elif group:    title_parts.append(group)
+    subtitle = []
+    if rms    is not None: subtitle.append(f'RMS = {rms*100:.1f}%')
+    if n_iter is not None: subtitle.append(f'{n_iter} iterations')
+    subtitle.append(
+        f'ρ range = {rho_model.min():.0f}–{rho_model.max():.0f} Ω·m'
+    )
+    ax.set_title('  |  '.join(title_parts) + '\n' + '  |  '.join(subtitle),
+                  fontsize=12, fontweight='bold', pad=12)
+
+    cbar = plt.colorbar(im, ax=ax, pad=0.015, label='Resistivity ρ (Ω·m)')
+    cbar.ax.tick_params(labelsize=9)
+    ax.grid(True, alpha=0.3, linestyle=':', color='white')
     plt.tight_layout()
-    plt.savefig(out_png, dpi=180, bbox_inches='tight', facecolor='white')
+    plt.savefig(out_png, dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
     return out_png
 
@@ -211,7 +261,8 @@ def process_ert_station(input_path, out_dir, station_id=None, inversion_params=N
     params = inversion_params or {}
     xc, zc, rho_model, rms = invert_resistivity_2d(df, verbose=verbose, **params)
     inv_png = os.path.join(out_dir, f'{station_id}_inverted.png')
-    plot_inverted_section(xc, zc, rho_model, inv_png, station_id)
+    plot_inverted_section(xc, zc, rho_model, inv_png, station_id,
+                           rms=float(rms[-1]), n_iter=len(rms))
     model_csv = os.path.join(out_dir, f'{station_id}_model.csv')
     export_model_csv(xc, zc, rho_model, model_csv)
     return {

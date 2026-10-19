@@ -102,24 +102,63 @@ def plot_dispersion_image(f_axis, v_axis, FV, picks, out_png, station_id="MW-??"
     return out_png
 
 
-def dispersion_to_vs_profile(picks, n_layers=8, max_depth=30.0):
-    """Simple half-wavelength depth transform."""
+def dispersion_to_vs_profile(picks, n_layers=12, max_depth=30.0):
+    """Convert picks to a physically-plausible Vs(z) profile.
+
+    Uses a half-wavelength depth transform (z ≈ Vr/(2.5·f)) and the Rayleigh→
+    shear conversion Vs ≈ 1.1·Vr for a Poisson ratio around 0.3, then applies
+    Gaussian smoothing and a soft monotonic-increase constraint so the output
+    reflects a layered earth whose stiffness grows with depth (rather than the
+    zigzag that raw depth-bin averaging produces when picks cluster unevenly).
+    """
     if len(picks) < 3:
         return np.array([0, max_depth]), np.array([250.0])
-    depths = 1.045 * picks[:, 1] / picks[:, 0] / 2.5
-    vs = picks[:, 1] / 1.09
+
+    f = picks[:, 0].astype(float)
+    v = picks[:, 1].astype(float)
+    mask = (f > 0) & (v > 0)
+    f, v = f[mask], v[mask]
+    if len(v) < 3:
+        return np.array([0, max_depth]), np.array([250.0])
+
+    # Depth transform and Rayleigh→Vs conversion
+    z_r = v / (2.5 * f)
+    vs_r = 1.1 * v
+
+    # Keep picks within the target depth window
+    keep = z_r <= max_depth * 1.2
+    z_r, vs_r = z_r[keep], vs_r[keep]
+    if len(z_r) < 3:
+        return np.array([0, max_depth]), np.array([250.0])
+
+    order = np.argsort(z_r)
+    z_r, vs_r = z_r[order], vs_r[order]
+
+    # Fine grid, interpolate, smooth
+    z_grid = np.linspace(0.5, max_depth, 200)
+    vs_grid = np.interp(z_grid, z_r, vs_r)
+    try:
+        from scipy.ndimage import gaussian_filter1d
+        vs_grid = gaussian_filter1d(vs_grid, sigma=10)
+    except ImportError:
+        for _ in range(20):
+            vs_grid[1:-1] = (vs_grid[:-2] + 2 * vs_grid[1:-1] + vs_grid[2:]) / 4
+
+    # Soft monotonic constraint — allow small (5%) dips but keep the trend
+    for i in range(1, len(vs_grid)):
+        if vs_grid[i] < vs_grid[i - 1] * 0.95:
+            vs_grid[i] = vs_grid[i - 1] * 0.98
+    cummax = np.maximum.accumulate(vs_grid * 0.98)
+    vs_grid = 0.7 * vs_grid + 0.3 * cummax
+
+    # Bin into output layers
     z_bounds = np.linspace(0, max_depth, n_layers + 1)
     vs_layers = np.zeros(n_layers)
     for i in range(n_layers):
-        mask = (depths >= z_bounds[i]) & (depths < z_bounds[i + 1])
-        if mask.sum() > 0:
-            vs_layers[i] = np.mean(vs[mask])
-        elif i > 0:
-            vs_layers[i] = vs_layers[i - 1]
+        m = (z_grid >= z_bounds[i]) & (z_grid < z_bounds[i + 1])
+        if m.sum() > 0:
+            vs_layers[i] = float(np.mean(vs_grid[m]))
         else:
-            vs_layers[i] = vs.mean() if len(vs) > 0 else 250.0
-    for i in range(n_layers):
-        if vs_layers[i] == 0:
             vs_layers[i] = vs_layers[i - 1] if i > 0 else 250.0
     return z_bounds, vs_layers
 
@@ -157,24 +196,87 @@ def site_class_from_vs30(vs30):
     return 'E - Soft soil'
 
 
-def plot_vs_profile(z_bounds, vs_layers, out_png, station_id="MW-??", vs30=None):
-    fig, ax = plt.subplots(figsize=(6, 8))
+# NEHRP / IBC Site Class bands used in the Vs profile plot:
+# (Vs30_lo, Vs30_hi, letter, fill_color, descriptive_name)
+_SITE_CLASS_BANDS = [
+    (0,    180,  'E', '#FEE2E2', 'Soft soil'),
+    (180,  360,  'D', '#FEF3C7', 'Stiff soil'),
+    (360,  760,  'C', '#DBEAFE', 'Very dense soil / soft rock'),
+    (760,  1500, 'B', '#D1FAE5', 'Rock'),
+    (1500, 5000, 'A', '#E5E7EB', 'Hard rock'),
+]
+
+
+def plot_vs_profile(z_bounds, vs_layers, out_png, station_id="MW-??",
+                     vs30=None, bh=None, group=None, group_color=None,
+                     group_name=None):
+    """Publication-quality Vs(z) step plot.
+
+    Draws NEHRP/IBC Site Class color bands as the background, the Vs(z) profile
+    as a step line filled with the group color, per-layer value labels, and the
+    Vs30 reference line.  Extra annotation arguments are optional for backward
+    compatibility.
+    """
+    fig, ax = plt.subplots(figsize=(8, 10), facecolor='white')
+
+    xmax = max(float(np.max(vs_layers)) * 1.3, 800.0)
+
+    # Site Class color bands
+    for lo, hi, cls, color, _ in _SITE_CLASS_BANDS:
+        if lo >= xmax:
+            break
+        ax.axvspan(lo, min(hi, xmax), color=color, alpha=0.35, zorder=0)
+        if lo < xmax * 0.9:
+            ax.text(lo + 10, max(z_bounds[-1] - 0.4, 0.1), f'Class {cls}',
+                     fontsize=8, color='#374151', fontweight='bold',
+                     va='bottom', zorder=1)
+
+    # Vs(z) step line + group-color fill
+    z_plot = np.repeat(z_bounds, 2)[1:-1]
+    vs_plot = np.repeat(vs_layers, 2)
+    fill_c = group_color or '#4682B4'
+    ax.plot(vs_plot, z_plot, '-', color='#1F2937',
+             linewidth=2.5, zorder=3, label='Vs(z)')
+    ax.fill_betweenx(z_plot, 0, vs_plot, alpha=0.3,
+                     color=fill_c, zorder=2)
+
+    # Per-layer value labels
     for i, vs in enumerate(vs_layers):
-        ax.fill_betweenx([z_bounds[i], z_bounds[i + 1]], 0, vs,
-                         facecolor='steelblue', edgecolor='black', linewidth=0.6)
-        ax.text(vs + 10, (z_bounds[i] + z_bounds[i + 1]) / 2,
-                f'{vs:.0f}', va='center', fontsize=8)
-    ax.invert_yaxis()
-    ax.set_xlabel('Shear-wave velocity Vs (m/s)', fontsize=11)
-    ax.set_ylabel('Depth (m)', fontsize=11)
-    title = f'{station_id} - Vs Profile'
+        z_mid = (z_bounds[i] + z_bounds[i + 1]) / 2
+        ax.annotate(f'{vs:.0f}', (vs, z_mid),
+                     xytext=(8, 0), textcoords='offset points',
+                     fontsize=8.5, color='#1F2937', va='center', ha='left')
+
+    # Vs30 reference
     if vs30 is not None:
-        title += f'  |  Vs30 = {vs30:.0f} m/s'
-    ax.set_title(title, fontsize=12, fontweight='bold')
-    ax.axhline(30, color='red', linestyle='--', linewidth=1.0, alpha=0.6)
-    ax.grid(True, alpha=0.3)
+        ax.axvline(vs30, color='red', linestyle='--', linewidth=1.5,
+                    alpha=0.85, zorder=4, label=f'Vs30 = {vs30:.0f} m/s')
+    ax.axhline(30, color='red', linestyle=':', linewidth=1.2, alpha=0.7)
+    ax.text(xmax * 0.02, 30.4, 'Vs30 depth (30 m)', color='red',
+             fontsize=9, va='top', fontweight='bold')
+
+    ax.set_xlim(0, xmax)
+    ax.set_ylim(z_bounds[-1] + 1, 0)   # inverted depth
+    ax.set_xlabel('Shear-wave velocity Vs (m/s)',
+                   fontsize=12, fontweight='bold')
+    ax.set_ylabel('Depth (m)', fontsize=12, fontweight='bold')
+
+    # Rich title
+    title_parts = [station_id]
+    if bh:         title_parts.append(bh)
+    if group_name: title_parts.append(group_name)
+    elif group:    title_parts.append(group)
+    subtitle = ''
+    if vs30 is not None:
+        sc = site_class_from_vs30(vs30)
+        subtitle = f'\nVs30 = {vs30:.0f} m/s  |  Site Class {sc}'
+    ax.set_title('  |  '.join(title_parts) + subtitle,
+                  fontsize=12, fontweight='bold', pad=12)
+    ax.legend(loc='lower left', fontsize=10,
+               framealpha=0.9, edgecolor='black')
+    ax.grid(True, alpha=0.4, linestyle=':', zorder=1)
     plt.tight_layout()
-    plt.savefig(out_png, dpi=180, bbox_inches='tight', facecolor='white')
+    plt.savefig(out_png, dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
     return out_png
 
