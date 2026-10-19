@@ -1,5 +1,43 @@
 # Changelog
 
+## v1.2.1 — 2026-10-19
+
+### 🆕 New Features
+
+1. **Configurable Settings system** (`seem_geo.settings`)
+   - Persistent config at `~/.seem_geo_settings.json`
+   - 6-tab Tkinter dialog: Image / Inversion / ERT Filters / MASW / QC / Confirmation
+   - Public getters: `get_inversion()`, `get_filters()`, `get_masw()`, `get_qc()`, `get_confirmation()`, `get_image()`
+   - Auto-applies matplotlib rcParams (DPI, colormap, figure size) at import
+   - `show_dialog(parent)` opens full editor
+   - `show_data_preview(parent, project, module)` — pre-run editable confirmation
+   - `format_plot_title()` — QC-aware title helper
+
+2. **Runtime core patches** (`seem_geo.core_patches`)
+   - Monkey-patches `process_ert_station`, `batch_ert`, `process_masw_station` to read user settings
+   - Safe-fallback: if a parameter isn't supported, calls original function unchanged
+   - MASW post-filters picks (smoothness window, Vs bounds, max jump %)
+   - ERT compare mode: runs 3 inversion methods into `_smoothness`, `_robust`, `_marquardt` subfolders
+
+3. **Pro GUI v4** (`seem_geo.gui.pro_main_window`)
+   - Mode selector: ERT only / MASW only / Both
+   - 3-column dashboard (ERT red / MASW blue / Shared purple)
+   - New-project wizard: Template / Empty / Import CSV
+   - Side-by-side viewer: Compare ERT (pseudo + inverted), Compare MASW (dispersion + Vs)
+   - Dark/Light theme toggle
+   - Settings menu (Ctrl+,) opens the 6-tab dialog
+   - Compare Inversions and Toggle QC in PDF buttons
+   - Launch: `python -c "from seem_geo.gui.pro_main_window import main; main()"`
+
+4. **High-resolution image patch** (`seem_geo.hires`)
+   - Standalone module forcing 300 DPI on all plots
+   - Alternative to settings-based DPI control
+
+### 🔧 Fixes
+- Version string synchronized: `pyproject.toml`, `__init__.py` both now at 1.2.1
+- Previous version drift between pyproject (1.1.0) and git tag (v1.2.1) caused silent install regressions
+- CI smoke test uses `init <DIR> --name "..."` (fixed from broken `init --output`)
+
 ## v1.1.0 — 2026-10-17
 
 ### 🆕 New Features (all 6 requested)
