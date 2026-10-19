@@ -51,13 +51,35 @@ def slant_stack_fv(traces, t, x, f_min=4.0, f_max=50.0, v_min=100.0, v_max=800.0
 
 
 def auto_pick_dispersion(f_axis, v_axis, FV, threshold=0.85):
-    """Pick fundamental-mode dispersion by max-energy ridge."""
+    """Pick fundamental-mode dispersion by max-energy ridge.
+
+    Uses quadratic (parabolic) peak-fitting around the argmax to get
+    sub-grid velocity precision (~0.1 m/s instead of the v_axis step).
+    This matters when two surveys sit in similar material: the raw argmax
+    would snap both to the same v-bin and hide genuine field variability.
+    """
     picks = []
+    n_v = len(v_axis)
+    dv = (v_axis[-1] - v_axis[0]) / (n_v - 1) if n_v > 1 else 1.0
     for i_f, f in enumerate(f_axis):
         row = FV[i_f, :]
-        i_max = np.argmax(row)
-        if row[i_max] >= threshold:
-            picks.append((f, v_axis[i_max]))
+        i_max = int(np.argmax(row))
+        peak = float(row[i_max])
+        if peak < threshold:
+            continue
+        # Parabolic sub-grid refinement when the peak is interior
+        if 0 < i_max < n_v - 1:
+            y_m, y_0, y_p = float(row[i_max - 1]), peak, float(row[i_max + 1])
+            denom = (y_m - 2 * y_0 + y_p)
+            if abs(denom) > 1e-12:
+                shift = 0.5 * (y_m - y_p) / denom  # in units of grid steps
+                shift = max(-1.0, min(1.0, shift))  # clamp
+                v_pick = float(v_axis[i_max] + shift * dv)
+            else:
+                v_pick = float(v_axis[i_max])
+        else:
+            v_pick = float(v_axis[i_max])
+        picks.append((f, v_pick))
     return np.array(picks)
 
 
