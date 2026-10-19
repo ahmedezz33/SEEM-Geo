@@ -152,7 +152,8 @@ class NewProjectDialog(tk.Toplevel):
     def __init__(self, parent, theme):
         super().__init__(parent)
         self.title('New Project')
-        self.geometry('520x420')
+        self.geometry('620x600')
+        self.minsize(580, 580)
         self.theme = theme
         self.result = None
         self.transient(parent)
@@ -164,9 +165,9 @@ class NewProjectDialog(tk.Toplevel):
         t = self.theme
         tk.Label(self, text='🗂️  Create new project',
                  font=('Segoe UI', 14, 'bold'),
-                 bg=t['bg'], fg=t['fg']).pack(pady=14)
-        tk.Label(self, text='Choose a starting mode:',
-                 font=('Segoe UI', 10),
+                 bg=t['bg'], fg=t['fg']).pack(pady=(14, 2))
+        tk.Label(self, text='Choose a starting mode, then set the project name and folder:',
+                 font=('Segoe UI', 9),
                  bg=t['bg'], fg=t['muted']).pack(pady=(0, 10))
 
         self.mode = tk.StringVar(value='template')
@@ -174,16 +175,16 @@ class NewProjectDialog(tk.Toplevel):
         def mode_card(key, title, desc):
             card = tk.Frame(self, bg=t['panel'],
                             highlightthickness=1, highlightbackground=t['border'])
-            card.pack(fill=tk.X, padx=20, pady=5)
+            card.pack(fill=tk.X, padx=20, pady=4)
             rb = tk.Radiobutton(card, text=title,
                                  variable=self.mode, value=key,
                                  font=('Segoe UI', 10, 'bold'),
                                  bg=t['panel'], fg=t['accent'],
                                  selectcolor=t['bg'], anchor='w')
-            rb.pack(fill=tk.X, padx=10, pady=(8, 0))
+            rb.pack(fill=tk.X, padx=10, pady=(6, 0))
             tk.Label(card, text=desc, font=('Segoe UI', 9),
                       bg=t['panel'], fg=t['muted'],
-                      justify='left', wraplength=460).pack(fill=tk.X, padx=30, pady=(0, 8))
+                      justify='left', wraplength=540).pack(fill=tk.X, padx=30, pady=(0, 6))
 
         mode_card('template',
                    '📋 Default template (12 sample sites)',
@@ -197,28 +198,119 @@ class NewProjectDialog(tk.Toplevel):
                    '📥 Import stations from CSV',
                    'Load site list from a CSV file (columns: bh, group, chainage_km, UCS, RQD, N60).')
 
-        # Name
-        name_frame = tk.Frame(self, bg=t['bg'])
-        name_frame.pack(fill=tk.X, padx=20, pady=10)
-        tk.Label(name_frame, text='Project name:', font=('Segoe UI', 9),
-                 bg=t['bg'], fg=t['fg']).pack(side=tk.LEFT)
+        # ---- Project name + folder path ----
+        inputs = tk.Frame(self, bg=t['panel'],
+                           highlightthickness=1, highlightbackground=t['border'])
+        inputs.pack(fill=tk.X, padx=20, pady=10)
+        tk.Label(inputs, text='📝 Project details', font=('Segoe UI', 10, 'bold'),
+                 bg=t['panel'], fg=t['accent']).pack(anchor='w', padx=10, pady=(8, 4))
+
+        # Project name
+        name_row = tk.Frame(inputs, bg=t['panel'])
+        name_row.pack(fill=tk.X, padx=10, pady=4)
+        tk.Label(name_row, text='Project name:', font=('Segoe UI', 9),
+                 bg=t['panel'], fg=t['fg'], width=14, anchor='w').pack(side=tk.LEFT)
         self.name_var = tk.StringVar(value='My Project')
-        tk.Entry(name_frame, textvariable=self.name_var,
-                  font=('Segoe UI', 10), width=30).pack(side=tk.LEFT, padx=8)
+        name_entry = tk.Entry(name_row, textvariable=self.name_var,
+                               font=('Segoe UI', 10))
+        name_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
+        self.name_var.trace_add('write', self._on_name_changed)
+
+        # Save location (folder path)
+        path_row = tk.Frame(inputs, bg=t['panel'])
+        path_row.pack(fill=tk.X, padx=10, pady=4)
+        tk.Label(path_row, text='Save location:', font=('Segoe UI', 9),
+                 bg=t['panel'], fg=t['fg'], width=14, anchor='w').pack(side=tk.LEFT)
+        self.path_var = tk.StringVar(value=self._default_folder())
+        path_entry = tk.Entry(path_row, textvariable=self.path_var,
+                               font=('Segoe UI', 10))
+        path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
+        tk.Button(path_row, text='📁 Browse...', font=('Segoe UI', 9),
+                   bg=t['accent'], fg=t['accent_fg'], relief='flat',
+                   padx=10, pady=2, cursor='hand2',
+                   command=self._browse_folder).pack(side=tk.LEFT, padx=(0, 4))
+
+        tk.Label(inputs,
+                 text='A sub-folder with the project name will be created inside the location above.',
+                 font=('Segoe UI', 8), bg=t['panel'], fg=t['muted'],
+                 wraplength=540, justify='left').pack(anchor='w', padx=12, pady=(2, 8))
+
+        # Preview of final path
+        self.preview_var = tk.StringVar()
+        tk.Label(self, textvariable=self.preview_var,
+                 font=('Consolas', 9), bg=t['bg'], fg=t['accent'],
+                 wraplength=560, justify='left').pack(padx=20, pady=(0, 4), anchor='w')
+        self._update_preview()
 
         # Buttons
         btn_frame = tk.Frame(self, bg=t['bg'])
-        btn_frame.pack(pady=16)
+        btn_frame.pack(pady=12)
         tk.Button(btn_frame, text='Cancel', font=('Segoe UI', 10),
                    bg=t['panel'], fg=t['fg'], relief='flat', padx=14, pady=6,
                    command=self.destroy).pack(side=tk.LEFT, padx=5)
         tk.Button(btn_frame, text='Create ▶', font=('Segoe UI', 10, 'bold'),
                    bg=t['accent'], fg=t['accent_fg'], relief='flat',
-                   padx=14, pady=6, cursor='hand2',
+                   padx=18, pady=6, cursor='hand2',
                    command=self._on_create).pack(side=tk.LEFT, padx=5)
 
+    def _default_folder(self):
+        """Pick a sensible default parent folder (Documents\\SEEM Geo Projects)."""
+        import os
+        home = os.path.expanduser('~')
+        candidates = [
+            os.path.join(home, 'Documents', 'SEEM Geo Projects'),
+            os.path.join(home, 'OneDrive', 'Documents', 'SEEM Geo Projects'),
+            os.path.join(home, 'OneDrive', 'المستندات', 'SEEM Geo Projects'),
+            os.path.join(home, 'Desktop', 'SEEM Geo Projects'),
+            home,
+        ]
+        for c in candidates:
+            parent = os.path.dirname(c)
+            if os.path.isdir(parent):
+                return c
+        return home
+
+    def _browse_folder(self):
+        d = filedialog.askdirectory(
+            title='Choose a parent folder for the new project',
+            initialdir=self.path_var.get() or os.path.expanduser('~'))
+        if d:
+            self.path_var.set(d)
+            self._update_preview()
+
+    def _on_name_changed(self, *_):
+        self._update_preview()
+
+    def _update_preview(self):
+        import os
+        name = self.name_var.get().strip() or 'Untitled'
+        safe = ''.join(c for c in name if c.isalnum() or c in ' _-').strip() or 'Untitled'
+        parent = self.path_var.get().strip() or self._default_folder()
+        full = os.path.join(parent, safe)
+        self.preview_var.set(f'📁  Will create: {full}')
+
     def _on_create(self):
-        self.result = {'mode': self.mode.get(), 'name': self.name_var.get()}
+        import os
+        name = self.name_var.get().strip()
+        parent = self.path_var.get().strip()
+        if not name:
+            messagebox.showwarning('Missing name',
+                                     'Please enter a project name.', parent=self)
+            return
+        if not parent:
+            messagebox.showwarning('Missing folder',
+                                     'Please choose a save location.', parent=self)
+            return
+        safe = ''.join(c for c in name if c.isalnum() or c in ' _-').strip()
+        full = os.path.join(parent, safe)
+        try:
+            os.makedirs(full, exist_ok=True)
+        except Exception as e:
+            messagebox.showerror('Folder error',
+                                   f'Could not create folder:\n{full}\n\n{e}',
+                                   parent=self)
+            return
+        self.result = {'mode': self.mode.get(), 'name': name, 'dir': full}
         self.destroy()
 
 
@@ -552,9 +644,7 @@ class SeemGeoProApp:
         self.root.wait_window(dlg)
         if not dlg.result:
             return
-        d = filedialog.askdirectory(title='Choose empty folder for the new project')
-        if not d:
-            return
+        d = dlg.result['dir']    # folder already picked and created inside the wizard
         mode = dlg.result['mode']
         name = dlg.result['name']
         try:
