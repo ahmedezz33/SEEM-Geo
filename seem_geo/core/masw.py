@@ -50,13 +50,21 @@ def slant_stack_fv(traces, t, x, f_min=4.0, f_max=50.0, v_min=100.0, v_max=800.0
     return f_axis, v_axis, FV
 
 
-def auto_pick_dispersion(f_axis, v_axis, FV, threshold=0.85):
+def auto_pick_dispersion(f_axis, v_axis, FV, threshold=0.85, trim=True,
+                           max_rel_jump=0.20, min_run=6):
     """Pick fundamental-mode dispersion by max-energy ridge.
 
     Uses quadratic (parabolic) peak-fitting around the argmax to get
     sub-grid velocity precision (~0.1 m/s instead of the v_axis step).
     This matters when two surveys sit in similar material: the raw argmax
     would snap both to the same v-bin and hide genuine field variability.
+
+    When ``trim=True`` (default) the picks are passed through
+    :func:`trim_picks_to_coherent_mode` which keeps only the longest coherent
+    run of the ridge — any pick whose velocity jumps by more than
+    ``max_rel_jump`` from its neighbor is treated as a higher-mode or
+    noise contaminant and dropped.  ``min_run`` is the minimum number of
+    consecutive-frequency picks that constitutes a valid ridge segment.
     """
     picks = []
     n_v = len(v_axis)
@@ -80,7 +88,49 @@ def auto_pick_dispersion(f_axis, v_axis, FV, threshold=0.85):
         else:
             v_pick = float(v_axis[i_max])
         picks.append((f, v_pick))
-    return np.array(picks)
+    picks = np.array(picks)
+    if trim and len(picks) >= min_run:
+        picks = trim_picks_to_coherent_mode(
+            picks, max_rel_jump=max_rel_jump, min_run=min_run)
+    return picks
+
+
+def trim_picks_to_coherent_mode(picks, max_rel_jump=0.20, min_run=6):
+    """Keep only the longest coherent run of the dispersion ridge.
+
+    A pick is considered part of the coherent fundamental mode when its
+    phase velocity does not jump by more than ``max_rel_jump`` (fractional)
+    from the previous pick at an adjacent frequency.  Picks after a big
+    jump are usually higher-mode leakage or noise and are dropped.
+    Returns the longest run of such consecutive picks that is at least
+    ``min_run`` samples long; if no segment qualifies, returns the input
+    unchanged.
+
+    This fixes the common problem where a MASW spread's response rolls
+    off above a certain frequency (often 25-40 Hz for shallow surveys)
+    and the picker starts chasing higher-mode or ambient-noise ridges.
+    """
+    if len(picks) < min_run:
+        return picks
+    f = picks[:, 0]
+    v = picks[:, 1]
+    order = np.argsort(f)
+    f = f[order]; v = v[order]
+
+    # Walk through picks; break the chain whenever v changes too much
+    segments = [[0]]
+    for i in range(1, len(f)):
+        rel = abs(v[i] - v[i - 1]) / max(v[i - 1], 1.0)
+        if rel <= max_rel_jump:
+            segments[-1].append(i)
+        else:
+            segments.append([i])
+    # Choose the longest segment that meets min_run
+    best = max(segments, key=len)
+    if len(best) < min_run:
+        return np.column_stack([f, v])  # nothing coherent — return sorted
+    idx = np.array(best, dtype=int)
+    return np.column_stack([f[idx], v[idx]])
 
 
 def plot_dispersion_image(f_axis, v_axis, FV, picks, out_png, station_id="MW-??",

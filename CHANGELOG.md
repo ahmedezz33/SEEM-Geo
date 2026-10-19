@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.3.2 — 2026-10-20
+
+Automatic rejection of higher-mode and noise-contaminated MASW picks.
+Where the previous picker chased every ridge in the f-v image —
+including the chaotic higher-mode leakage that typically appears above
+the array's effective cutoff frequency — the new picker keeps only
+the longest coherent run of the fundamental mode and drops the rest.
+
+### 🔬 MASW picker improvements
+
+1. **New `trim_picks_to_coherent_mode(picks, max_rel_jump, min_run)`**
+   in `seem_geo.core.masw`.  Walks the picks sorted by frequency,
+   breaks the chain wherever the velocity jumps by more than
+   `max_rel_jump` (default 20%), and returns the longest surviving
+   segment of at least `min_run` samples (default 6).
+2. **`auto_pick_dispersion` auto-trims by default** — pass `trim=False`
+   to recover the old behavior.  On the Al-Muwayh HVDC G5 stations
+   this prunes 200 raw picks down to ~120 clean ones in the 6-34 Hz
+   band, dropping the 35-50 Hz higher-mode garbage that was pushing
+   Vs30 estimates around by ±25%.
+
+### 🔁 Backward compatibility
+
+`auto_pick_dispersion` kept its original signature; `trim=True` is a
+new default kwarg.  Existing calls work unchanged and automatically
+get cleaner picks; pass `trim=False` for the raw behavior.
+
+
 ## v1.3.1 — 2026-10-19
 
 Higher-resolution inversion grid, automatic field-data de-spiking,
