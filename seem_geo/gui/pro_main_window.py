@@ -905,6 +905,22 @@ class SeemGeoProApp:
     def _do_step(self, key):
         p = self.project
         if key == 'gen_data':
+            # Guard: skip if real field data already present in ert_input_dir
+            # (any *.dat or non-template *.csv). This prevents gen-data from
+            # overwriting Ahmed's real SYSCAL Pro -> Res2DInv conversions.
+            import glob, os
+            ert_dir = p.ert_input_dir
+            dats  = glob.glob(os.path.join(ert_dir, 'ERT-*.dat'))
+            csvs  = glob.glob(os.path.join(ert_dir, 'ERT-*.csv'))
+            if dats and len(dats) >= len(p.sites) * 0.5:
+                self._log(f'[~] gen_data SKIPPED — {len(dats)} real .dat files '
+                           f'already present in {ert_dir}', 'warning')
+                return
+            if csvs and all(os.path.getsize(c) > 20000 for c in csvs):
+                # Big CSVs = probably real imported data
+                self._log(f'[~] gen_data SKIPPED — {len(csvs)} large .csv files '
+                           f'already present', 'warning')
+                return
             from seem_geo.data.realistic_field_generator import generate_project_data
             generate_project_data(p)
         elif key == 'ert':
