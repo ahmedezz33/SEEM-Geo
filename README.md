@@ -11,11 +11,11 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23455148.svg)](https://doi.org/10.5281/zenodo.23455148)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.1.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.0-brightgreen.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Mac-lightgrey.svg)](#installation)
 [![CI](https://github.com/ahmedezz33/seem-geo/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmedezz33/seem-geo/actions)
 [![Docs](https://img.shields.io/badge/docs-mkdocs-526CFE.svg)](https://ahmedezz33.github.io/seem-geo/)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23455148.svg)](https://doi.org/10.5281/zenodo.23455148)
 [![Code of Conduct](https://img.shields.io/badge/contributor%20covenant-2.1-5e9bba.svg)](CODE_OF_CONDUCT.md)
 
 [🚀 Quick Start](#-quick-start--30-seconds) ·
@@ -200,7 +200,7 @@ If you use SEEM Geo in your research, please cite it as:
   year  = 2026,
   version  = {1.1.0},
   publisher  = {Zenodo},
-  doi  = {10.5281/zenodo.XXXXXXX},
+  doi  = {10.5281/zenodo.23455148},
   url  = {https://github.com/ahmedezz33/seem-geo}
 }
 ```
