@@ -1,6 +1,13 @@
 # Changelog
 
-## v1.2.1 — 2026-10-19
+## v1.2.2 — 2026-10-19
+
+Re-release of v1.2.1 with the version string actually bumped in
+`pyproject.toml` and `seem_geo/__init__.py` (previous v1.2.1 tag
+accidentally shipped with `version = "1.1.0"`, causing silent install
+regressions). All features below are the same as the intended v1.2.1.
+
+
 
 ### 🆕 New Features
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seem-geo"
-version = "1.2.1"
+version = "1.2.2"
 description = "SEEM Geo — Professional ERT & MASW Processing Suite for engineering-geology site investigations"
 readme = "README.md"
 license = { file = "LICENSE" }
