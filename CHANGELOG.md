@@ -16,7 +16,7 @@ the longest coherent run of the fundamental mode and drops the rest.
    `max_rel_jump` (default 20%), and returns the longest surviving
    segment of at least `min_run` samples (default 6).
 2. **`auto_pick_dispersion` auto-trims by default** — pass `trim=False`
-   to recover the old behavior.  On the Al-Muwayh HVDC G5 stations
+   to recover the old behavior.  On the test HVDC corridor G5 stations
    this prunes 200 raw picks down to ~120 clean ones in the 6-34 Hz
    band, dropping the 35-50 Hz higher-mode garbage that was pushing
    Vs30 estimates around by ±25%.
@@ -45,7 +45,7 @@ quality-control pass.
    boolean keep-mask so the caller knows how many points were removed.
 2. **`process_ert_station` now auto-despikes** before inversion.
    Disable with `inversion_params={'despike': False, ...}`.  The run
-   summary gains an `n_spikes_removed` field.  On the Al-Muwayh HVDC
+   summary gains an `n_spikes_removed` field.  On the test HVDC corridor
    G2 stations this drops RMS from 35% to 20-25% — the outliers were
    contact-resistance spikes from poorly coupled electrodes in the
    dense-weathered zone, not real geology.
@@ -107,11 +107,11 @@ work unchanged and automatically pick up the new look at 300 DPI.
    Replaces the previous equal-depth-bin averaging that produced
    non-monotonic (zigzag) profiles when picks clustered unevenly.
    Default layer count raised from 8 → 12 for better vertical
-   resolution. **Impact on Al-Muwayh HVDC thesis data:** Vs30 for
-   residual-soil stations (G5) moved from 254 → 271 m/s, dense
-   weathered (G2) from 484 → 619 m/s, crystalline (G1) from 541 →
-   730 m/s — all shifts upward because the old binning averaged over
-   the stiffer deep picks instead of propagating the trend.
+   resolution. **Impact on the test HVDC corridor dataset:** Vs30 for
+   residual-soil stations (G5) moved from 254 to 271 m/s, dense
+   weathered (G2) from 484 to 619 m/s, crystalline (G1) from 541 to
+   730 m/s. All shifts are upward because the old binning averaged
+   over the stiffer deep picks instead of propagating the trend.
 
 ### 🔁 Backward compatibility
 
