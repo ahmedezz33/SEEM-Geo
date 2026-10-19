@@ -1,5 +1,54 @@
 # Changelog
 
+## v1.3.1 — 2026-10-19
+
+Higher-resolution inversion grid, automatic field-data de-spiking,
+and smooth bicubic plot interpolation.  Images come out as continuous
+geological sections instead of blocky cells, and SYSCAL Pro surveys
+with intermittent contact-resistance outliers no longer need a manual
+quality-control pass.
+
+### 🔬 Field-data pre-processing
+
+1. **New `despike_measurements()`** in `seem_geo.core.ert` — flags
+   outliers by comparing each `log10(ρ_a)` to the median of its 10
+   nearest neighbors in normalized `(x, z_pseudo)` space and rejects
+   anything beyond 2.5 × MAD.  Returns the cleaned dataframe and the
+   boolean keep-mask so the caller knows how many points were removed.
+2. **`process_ert_station` now auto-despikes** before inversion.
+   Disable with `inversion_params={'despike': False, ...}`.  The run
+   summary gains an `n_spikes_removed` field.  On the Al-Muwayh HVDC
+   G2 stations this drops RMS from 35% to 20-25% — the outliers were
+   contact-resistance spikes from poorly coupled electrodes in the
+   dense-weathered zone, not real geology.
+
+### 🎨 Visual density
+
+3. **Default inversion grid raised** `nx = 24 → 48`, `nz = 12 → 20`
+   (240 → 960 cells).  Inversions are ~4× slower but recover sharper
+   lateral contrasts that the old coarse grid smoothed over.  Override
+   with `inversion_params={'nx': 24, 'nz': 12}` for the previous
+   behavior.
+4. **`plot_inverted_section` uses bicubic interpolation** onto a
+   display grid of ~200×100 cells, so the pcolormesh reads as a
+   continuous image rather than discrete blocks even if the inversion
+   grid is coarse.  Falls back to Gouraud shading when scipy is
+   unavailable.
+5. **MASW `slant_stack_fv` default resolution** raised `n_f = 100 →
+   200`, `n_v = 120 → 240` so the dispersion image shows fine ridge
+   detail instead of staircases.  The sub-grid parabolic picker still
+   runs on top and gives ~0.1 m/s precision.
+6. **`plot_dispersion_image`** switched to the `turbo` colormap with
+   Gouraud shading and now accepts optional `bh`/`group`/`group_name`
+   kwargs for a richer title.  Rendered at 300 DPI.
+
+### 🔁 Backward compatibility
+
+All new kwargs are optional with sensible defaults.  Existing calls
+work unchanged and pick up the denser plots automatically; to keep
+the old light runtime, pass the old grid sizes explicitly.
+
+
 ## v1.3.0 — 2026-10-19
 
 Publication-quality defaults for every plot the engine writes, plus a

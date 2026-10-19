@@ -24,7 +24,7 @@ def read_masw_csv(path, sr_hz=2000, dx_m=2.0):
 
 
 def slant_stack_fv(traces, t, x, f_min=4.0, f_max=50.0, v_min=100.0, v_max=800.0,
-                   n_f=100, n_v=120):
+                   n_f=200, n_v=240):
     """f-v slant-stack transform (surface-wave dispersion imaging)."""
     n_t, n_ch = traces.shape
     dt = t[1] - t[0]
@@ -83,21 +83,34 @@ def auto_pick_dispersion(f_axis, v_axis, FV, threshold=0.85):
     return np.array(picks)
 
 
-def plot_dispersion_image(f_axis, v_axis, FV, picks, out_png, station_id="MW-??"):
-    fig, ax = plt.subplots(figsize=(10, 6))
+def plot_dispersion_image(f_axis, v_axis, FV, picks, out_png, station_id="MW-??",
+                           bh=None, group=None, group_name=None):
+    """Publication-quality f-v dispersion image with smooth interpolation."""
+    fig, ax = plt.subplots(figsize=(11, 6.5), facecolor='white')
     F, V = np.meshgrid(f_axis, v_axis, indexing='ij')
-    im = ax.pcolormesh(F, V, FV, cmap='jet', shading='auto', vmin=0, vmax=1)
+    # Gouraud shading gives bilinear interpolation across cells, so the image
+    # reads as a continuous energy field rather than discrete bins.
+    im = ax.pcolormesh(F, V, FV, cmap='turbo', shading='gouraud',
+                        vmin=0, vmax=1)
     if len(picks) > 0:
         ax.plot(picks[:, 0], picks[:, 1], 'wo-', markersize=5,
-                markeredgecolor='black', linewidth=1.2, label='Fundamental mode')
-        ax.legend(loc='upper right', fontsize=9)
-    ax.set_xlabel('Frequency (Hz)', fontsize=11)
-    ax.set_ylabel('Phase velocity (m/s)', fontsize=11)
-    ax.set_title(f'{station_id} - f-v Dispersion Image',
-                 fontsize=13, fontweight='bold')
-    plt.colorbar(im, ax=ax, label='Normalized energy')
+                markeredgecolor='black', linewidth=1.3,
+                label='Fundamental-mode picks')
+        ax.legend(loc='upper right', fontsize=10, framealpha=0.9,
+                   edgecolor='black')
+    ax.set_xlabel('Frequency (Hz)', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Phase velocity (m/s)', fontsize=12, fontweight='bold')
+    title_parts = [station_id]
+    if bh:         title_parts.append(bh)
+    if group_name: title_parts.append(group_name)
+    elif group:    title_parts.append(group)
+    ax.set_title('  |  '.join(title_parts) + '\nf-v Dispersion Image',
+                  fontsize=12, fontweight='bold', pad=12)
+    cbar = plt.colorbar(im, ax=ax, label='Normalized energy', pad=0.015)
+    cbar.ax.tick_params(labelsize=9)
+    ax.grid(True, alpha=0.25, linestyle=':', color='white')
     plt.tight_layout()
-    plt.savefig(out_png, dpi=180, bbox_inches='tight', facecolor='white')
+    plt.savefig(out_png, dpi=300, bbox_inches='tight', facecolor='white')
     plt.close()
     return out_png
 

@@ -8,7 +8,7 @@ publication-ready outputs.
 
 Open source · MIT License
 """
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 __author__ = 'Ahmed'
 
 from seem_geo.core.ert import process_ert_station, batch_ert
