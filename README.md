@@ -216,7 +216,7 @@ MIT — see [LICENSE](LICENSE). Free for academic and commercial use.
 ## 📧 Contact
 
 **Ahmed** · Open-source project
-📩 [your-email@example.com](mailto:your-email@example.com)
+📩 [ahmedezz3@gmail.com](mailto:ahmedezz3@gmail.com)
 
 ## 🙏 Acknowledgments
 
