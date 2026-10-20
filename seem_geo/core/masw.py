@@ -23,8 +23,8 @@ def read_masw_csv(path, sr_hz=2000, dx_m=2.0):
     return read_shot_csv(path, sr=sr_hz, dx=dx_m)
 
 
-def slant_stack_fv(traces, t, x, f_min=4.0, f_max=50.0, v_min=100.0, v_max=800.0,
-                   n_f=200, n_v=240):
+def slant_stack_fv(traces, t, x, f_min=4.0, f_max=50.0, v_min=100.0, v_max=1500.0,
+                   n_f=200, n_v=300):
     """f-v slant-stack transform (surface-wave dispersion imaging)."""
     n_t, n_ch = traces.shape
     dt = t[1] - t[0]
