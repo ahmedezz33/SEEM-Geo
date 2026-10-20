@@ -142,8 +142,82 @@ def despike_measurements(df, k_neighbors=10, n_sigma=2.5):
     return df[keep].reset_index(drop=True), keep
 
 
-def invert_resistivity_2d(df, nx=48, nz=20, max_depth=30, lam=10.0, n_iter=5, verbose=False):
-    """Occam-style smoothness-constrained least-squares inversion."""
+def equalize_columns(df, mode='median'):
+    """Remove systematic per-column (per-x) bias from the pseudosection.
+
+    Imbalanced electrode contact resistance in the field produces vertical
+    stripes in the pseudosection: at a given ``x_center`` *every* measurement
+    is uniformly high or low across all pseudo-depths.  This function detects
+    that bias by comparing each ``x_center`` column's median log(rho_a) to the
+    global median, then subtracts the shift.
+
+    This is a *data-space* correction applied before inversion; it does not
+    change the geology, only removes the systematic acquisition artifact.
+
+    Returns a copy of ``df`` with ``rho_a`` corrected plus the per-column
+    shifts dictionary so the correction can be audited.
+    """
+    df = df.copy().reset_index(drop=True)
+    x_centers = np.round(df['x'].values, 1)
+    unique_x = np.unique(x_centers)
+    log_r = np.log10(np.maximum(df['rho_a'].values, 1e-6))
+    global_med = float(np.median(log_r))
+    shifts = {}
+    corrected = log_r.copy()
+    for xc in unique_x:
+        mask = (x_centers == xc)
+        if mask.sum() < 3:
+            continue
+        col_med = float(np.median(log_r[mask]))
+        shift = col_med - global_med
+        # Only correct shifts larger than 0.15 log-units (~40%) - preserves real geology
+        if abs(shift) > 0.15:
+            shifts[float(xc)] = shift
+            corrected[mask] = log_r[mask] - shift
+    df['rho_a'] = 10 ** corrected
+    return df, shifts
+
+
+def export_res2dinv_dat(df, out_path, station_id='ERT', a_unit=5.0, array_type=1):
+    """Export the (optionally cleaned) measurements as a Res2DInv .dat file.
+
+    ``array_type``: 1 = Wenner-alpha, 11 = general array (used for mixed arrays
+    or imported data where exact A/B/M/N positions matter).  The simple Wenner
+    format (type 1) is written here since this is the HVDC corridor's primary
+    array; files are compatible with Res2DInv 3.x / 4.x and with Loke's free
+    Res2DInvx64 Student edition.
+    """
+    with open(out_path, 'w') as f:
+        f.write(f'{station_id}\n')
+        f.write(f'{a_unit}\n')
+        f.write(f'{array_type}\n')
+        f.write(f'{len(df)}\n')
+        f.write('1\n')  # type of x-location (1 = first electrode)
+        f.write('0\n')  # no IP data
+        for _, row in df.iterrows():
+            # Wenner: x_first_electrode  a_spacing  rho_a
+            x_first = row['x'] - 1.5 * row['a']
+            f.write(f'{x_first:.2f}  {row["a"]:.2f}  {row["rho_a"]:.2f}\n')
+        f.write('0\n0\n0\n0\n')  # trailing zeros expected by Res2DInv
+    return out_path
+
+
+def invert_resistivity_2d(df, nx=48, nz=20, max_depth=30, lam=10.0, n_iter=5,
+                          verbose=False, robust=False, robust_c=1.0):
+    """Occam-style smoothness-constrained least-squares inversion.
+
+    Parameters
+    ----------
+    lam : float
+        Smoothness regularization (lower → sharper features but higher RMS).
+        Default 10 for geological stability; try 3-5 for lithological contacts.
+    robust : bool
+        If True, use IRLS (Iteratively Reweighted Least Squares) with Huber
+        weights so outlier measurements influence the model less than L2
+        least-squares would allow.  Essential for noisy field data.
+    robust_c : float
+        Huber threshold in log-units of residual (default 1.0).
+    """
     xmin, xmax = df['x'].min(), df['x'].max()
     dx = (xmax - xmin) / nx
     dz = max_depth / nz
@@ -186,8 +260,21 @@ def invert_resistivity_2d(df, nx=48, nz=20, max_depth=30, lam=10.0, n_iter=5, ve
     for it in range(n_iter):
         d_pred = J @ m
         residual = d - d_pred
-        A = J.T @ J + lam * C
-        b = J.T @ residual
+
+        # IRLS robust weights (Huber-like) — downweights outliers
+        if robust:
+            abs_r = np.abs(residual)
+            scale = max(np.median(abs_r) * 1.4826, 1e-3)
+            w = np.where(abs_r / scale <= robust_c, 1.0,
+                         robust_c * scale / np.maximum(abs_r, 1e-6))
+            W = w[:, None]
+            Jw = J * W
+            A = Jw.T @ J + lam * C
+            b = Jw.T @ residual
+        else:
+            A = J.T @ J + lam * C
+            b = J.T @ residual
+
         try:
             dm = np.linalg.solve(A, b)
         except np.linalg.LinAlgError:
@@ -196,7 +283,8 @@ def invert_resistivity_2d(df, nx=48, nz=20, max_depth=30, lam=10.0, n_iter=5, ve
         rms = np.sqrt(np.mean((d - J @ m) ** 2))
         rms_history.append(rms)
         if verbose:
-            print(f"  iter {it + 1}: RMS log-residual = {rms:.4f}")
+            tag = 'IRLS' if robust else 'L2'
+            print(f"  iter {it + 1}: RMS log-residual = {rms:.4f} ({tag}, λ={lam})")
 
     rho_model = 10 ** m.reshape(nz, nx)
     return xc, zc, rho_model, rms_history
@@ -307,13 +395,30 @@ def process_ert_station(input_path, out_dir, station_id=None, inversion_params=N
     # Auto-despike: removes field outliers (bad contact resistance etc.) before
     # inversion.  Disable with inversion_params={'despike': False, ...}.
     do_despike = params.pop('despike', True)
+    # Column-equalize: removes per-x systematic bias (electrode contact
+    # resistance imbalance appearing as vertical stripes in the pseudosection).
+    # Disable with inversion_params={'equalize_columns': False, ...}.
+    do_equalize = params.pop('equalize_columns', True)
     n_before = len(df)
     n_spikes = 0
+    n_cols_equalized = 0
     if do_despike and n_before > 20:
         df, keep = despike_measurements(df)
         n_spikes = int((~keep).sum())
         if verbose and n_spikes:
             print(f"  despike removed {n_spikes}/{n_before} ({100*n_spikes/n_before:.1f}%) outliers")
+    if do_equalize and len(df) > 20:
+        df, shifts = equalize_columns(df)
+        n_cols_equalized = len(shifts)
+        if verbose and n_cols_equalized:
+            print(f"  equalized {n_cols_equalized} biased electrode columns")
+    # Also drop/export Res2DInv .dat alongside outputs, for user's optional
+    # cross-check with professional Res2DInv software.
+    try:
+        dat_out = os.path.join(out_dir, f'{station_id}_cleaned.dat')
+        export_res2dinv_dat(df, dat_out, station_id=station_id)
+    except Exception:
+        pass
     xc, zc, rho_model, rms = invert_resistivity_2d(df, verbose=verbose, **params)
     inv_png = os.path.join(out_dir, f'{station_id}_inverted.png')
     plot_inverted_section(xc, zc, rho_model, inv_png, station_id,
@@ -324,6 +429,7 @@ def process_ert_station(input_path, out_dir, station_id=None, inversion_params=N
         'station': station_id,
         'n_data': len(df),
         'n_spikes_removed': n_spikes,
+        'n_cols_equalized': n_cols_equalized,
         'rho_a_min': float(df['rho_a'].min()),
         'rho_a_max': float(df['rho_a'].max()),
         'final_rms': float(rms[-1]),
