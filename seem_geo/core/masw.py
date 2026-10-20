@@ -240,11 +240,21 @@ def dispersion_to_vs_profile(picks, n_layers=12, max_depth=30.0, clip_to_resolve
 
 
 def compute_vs30(z_bounds, vs_layers):
-    """Travel-time weighted average over top 30 m."""
+    """Travel-time weighted average over top 30 m.
+
+    When the profile is shorter than 30 m (because the picks did not resolve
+    down to that depth), the integral below the deepest resolved layer is
+    completed using that layer's Vs as a flat extrapolation. This is the
+    standard engineering convention for site-class determination when MASW
+    does not reach the full 30 m window; the alternative (ignoring the
+    unresolved portion) biases Vs30 toward the softer surface materials and
+    under-classifies the site.
+    """
     if len(vs_layers) == 0:
         return 0.0
     t_total = 0.0
     z_total = 0.0
+    last_vs = None
     for i, vs in enumerate(vs_layers):
         z_top = z_bounds[i]
         z_bot = z_bounds[i + 1]
@@ -254,6 +264,12 @@ def compute_vs30(z_bounds, vs_layers):
         if dz > 0 and vs > 0:
             t_total += dz / vs
             z_total += dz
+            last_vs = vs
+    # Extend to 30 m with the deepest resolved Vs if we fell short
+    if z_total > 0 and z_total < 30 and last_vs:
+        remainder = 30 - z_total
+        t_total += remainder / last_vs
+        z_total = 30.0
     if t_total == 0:
         return 0.0
     return z_total / t_total
@@ -327,12 +343,31 @@ def plot_vs_profile(z_bounds, vs_layers, out_png, station_id="MW-??",
     if vs30 is not None:
         ax.axvline(vs30, color='red', linestyle='--', linewidth=1.5,
                     alpha=0.85, zorder=4, label=f'Vs30 = {vs30:.0f} m/s')
-    ax.axhline(30, color='red', linestyle=':', linewidth=1.2, alpha=0.7)
-    ax.text(xmax * 0.02, 30.4, 'Vs30 depth (30 m)', color='red',
-             fontsize=9, va='top', fontweight='bold')
+
+    # 30 m reference line and depth-of-resolution marker
+    resolved_depth = float(z_bounds[-1])
+    if resolved_depth < 30:
+        # Mark the end of resolved data within the plot, and note that
+        # Vs30 was completed using flat extrapolation to 30 m.
+        ax.axhline(resolved_depth, color='orange', linestyle='--',
+                    linewidth=1.2, alpha=0.7)
+        ax.text(xmax * 0.98, resolved_depth - 0.3,
+                 f'Max resolved depth = {resolved_depth:.1f} m\n'
+                 f'Vs30 completed with flat Vs below',
+                 color='#B45309', fontsize=8, va='bottom', ha='right',
+                 fontweight='bold',
+                 bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
+                            alpha=0.85, edgecolor='#B45309'))
+    else:
+        ax.axhline(30, color='red', linestyle=':', linewidth=1.2, alpha=0.7)
+        ax.text(xmax * 0.02, 30.4, 'Vs30 depth (30 m)', color='red',
+                 fontsize=9, va='top', fontweight='bold')
 
     ax.set_xlim(0, xmax)
-    ax.set_ylim(z_bounds[-1] + 1, 0)   # inverted depth
+    # Always plot to at least 15 m so the Site Class bands context is visible,
+    # but never beyond the data-resolved depth
+    plot_ymax = max(resolved_depth + 1, 15)
+    ax.set_ylim(plot_ymax, 0)   # inverted depth
     ax.set_xlabel('Shear-wave velocity Vs (m/s)',
                    fontsize=12, fontweight='bold')
     ax.set_ylabel('Depth (m)', fontsize=12, fontweight='bold')
