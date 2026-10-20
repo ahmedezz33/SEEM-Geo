@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.3.3 — 2026-10-20
+
+MASW output no longer shows a misleading flat tail of extrapolated
+values below the data-support depth. The flat tail was a plotting
+artefact (not a bug in the physics), produced when the output Vs(z)
+was drawn to a user-set max_depth (30 m by default) that could exceed
+the deepest depth actually resolved by the lowest-frequency pick.
+Readers of the figure could not tell that the bottom half of the
+profile was extrapolation rather than measurement.
+
+- `dispersion_to_vs_profile` gains a `clip_to_resolved` kwarg
+  (default True). When set, the output depth is capped at
+  z_max = v(f_min) / (2.5 * f_min), the deepest depth probed by the
+  lowest-frequency pick. On a MW-01-type MASW spread with picks down
+  to 6 Hz at ~260 m/s this caps the output at ~17 m instead of
+  forcing a 30 m plot. Pass clip_to_resolved=False for the legacy
+  behaviour.
+- All upstream callers pick up the clipped depth automatically.
+- Vs30 computation unaffected when resolved depth is >= 30 m; uses
+  the clipped profile with the deepest resolved Vs for the Vs30
+  travel-time integral when it is less.
+
+
 ## v1.3.2 — 2026-10-20
 
 Automatic rejection of higher-mode and noise-contaminated MASW picks.

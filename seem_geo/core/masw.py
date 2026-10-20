@@ -165,7 +165,7 @@ def plot_dispersion_image(f_axis, v_axis, FV, picks, out_png, station_id="MW-??"
     return out_png
 
 
-def dispersion_to_vs_profile(picks, n_layers=12, max_depth=30.0):
+def dispersion_to_vs_profile(picks, n_layers=12, max_depth=30.0, clip_to_resolved=True):
     """Convert picks to a physically-plausible Vs(z) profile.
 
     Uses a half-wavelength depth transform (z ≈ Vr/(2.5·f)) and the Rayleigh→
@@ -173,6 +173,12 @@ def dispersion_to_vs_profile(picks, n_layers=12, max_depth=30.0):
     Gaussian smoothing and a soft monotonic-increase constraint so the output
     reflects a layered earth whose stiffness grows with depth (rather than the
     zigzag that raw depth-bin averaging produces when picks cluster unevenly).
+
+    When ``clip_to_resolved=True`` (default) the output depth is clipped to the
+    data-support depth z_max = v(f_min) / (2.5·f_min), i.e. the deepest point
+    actually probed by the lowest-frequency pick. This avoids a misleading
+    flat tail of extrapolated values below the resolution limit. Pass
+    ``clip_to_resolved=False`` for the legacy behaviour (extends to max_depth).
     """
     if len(picks) < 3:
         return np.array([0, max_depth]), np.array([250.0])
@@ -196,6 +202,13 @@ def dispersion_to_vs_profile(picks, n_layers=12, max_depth=30.0):
 
     order = np.argsort(z_r)
     z_r, vs_r = z_r[order], vs_r[order]
+
+    # Clip the output depth to the data-support depth (lowest-frequency pick)
+    if clip_to_resolved:
+        f_min = float(f.min())
+        v_at_fmin = float(v[f.argmin()])
+        z_resolved = v_at_fmin / (2.5 * f_min)
+        max_depth = min(max_depth, z_resolved)
 
     # Fine grid, interpolate, smooth
     z_grid = np.linspace(0.5, max_depth, 200)

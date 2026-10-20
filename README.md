@@ -11,7 +11,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23455148.svg)](https://doi.org/10.5281/zenodo.23455148)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.3.2-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.3-brightgreen.svg)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Mac-lightgrey.svg)](#installation)
 [![CI](https://github.com/ahmedezz33/seem-geo/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmedezz33/seem-geo/actions)
 [![Docs](https://img.shields.io/badge/docs-mkdocs-526CFE.svg)](https://ahmedezz33.github.io/seem-geo/)
