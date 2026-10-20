@@ -134,20 +134,43 @@ def trim_picks_to_coherent_mode(picks, max_rel_jump=0.20, min_run=6):
 
 
 def plot_dispersion_image(f_axis, v_axis, FV, picks, out_png, station_id="MW-??",
-                           bh=None, group=None, group_name=None):
-    """Publication-quality f-v dispersion image with smooth interpolation."""
+                           bh=None, group=None, group_name=None,
+                           crop_to_picks=True, f_margin=0.3, v_margin=0.5):
+    """Publication-quality f-v dispersion image with smooth interpolation.
+
+    When ``crop_to_picks=True`` (default) the frequency and velocity axes are
+    cropped to the picked region plus a configurable margin (``f_margin`` and
+    ``v_margin``, both fractional).  This hides the noise outside the usable
+    band and focuses the reader on the fundamental mode ridge.  Pass
+    ``crop_to_picks=False`` to see the full raw image.
+    """
     fig, ax = plt.subplots(figsize=(11, 6.5), facecolor='white')
     F, V = np.meshgrid(f_axis, v_axis, indexing='ij')
     # Gouraud shading gives bilinear interpolation across cells, so the image
-    # reads as a continuous energy field rather than discrete bins.
+    # reads as a continuous energy field rather than discrete bins.  Lower
+    # vmin raises the floor so weak-energy regions do not dominate the plot
+    # with chaotic color.
     im = ax.pcolormesh(F, V, FV, cmap='turbo', shading='gouraud',
-                        vmin=0, vmax=1)
+                        vmin=0.15, vmax=1.0)
     if len(picks) > 0:
         ax.plot(picks[:, 0], picks[:, 1], 'wo-', markersize=5,
                 markeredgecolor='black', linewidth=1.3,
                 label='Fundamental-mode picks')
         ax.legend(loc='upper right', fontsize=10, framealpha=0.9,
                    edgecolor='black')
+
+    # Crop axes to the picked region plus margin, so the noisy out-of-band
+    # region does not dominate the figure.  Only crops when we have picks.
+    if crop_to_picks and len(picks) > 0:
+        f_lo, f_hi = float(picks[:, 0].min()), float(picks[:, 0].max())
+        v_lo, v_hi = float(picks[:, 1].min()), float(picks[:, 1].max())
+        f_pad = (f_hi - f_lo) * f_margin
+        v_pad = (v_hi - v_lo) * v_margin
+        ax.set_xlim(max(float(f_axis[0]), f_lo - f_pad),
+                     min(float(f_axis[-1]), f_hi + f_pad))
+        ax.set_ylim(max(float(v_axis[0]), v_lo - v_pad),
+                     min(float(v_axis[-1]), v_hi + v_pad))
+
     ax.set_xlabel('Frequency (Hz)', fontsize=12, fontweight='bold')
     ax.set_ylabel('Phase velocity (m/s)', fontsize=12, fontweight='bold')
     title_parts = [station_id]
